@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:quiz_app/widgets/image_picker.dart';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -12,15 +16,21 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
+  File? _selectedImage;
   var _enteredEmail = '';
+  var _enteredUsername = '';
   var _enteredPassword = '';
   bool _isLogin = true;
+  var _isAuthenticating = false;
 
   void _submit() async {
     final isValid = _formKey.currentState!.validate();
-    if (!isValid) return;
+    if (!isValid || !_isLogin && _selectedImage == null) return;
     _formKey.currentState!.save();
     try {
+      setState(() {
+        _isAuthenticating = true;
+      });
       if (_isLogin) {
         final userCredentials = await _firebase.signInWithEmailAndPassword(
             email: _enteredEmail, password: _enteredPassword);
@@ -29,6 +39,14 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _enteredEmail,
           password: _enteredPassword,
         );
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('user_images')
+            .child('${userCredentials.user!.uid}.jpg');
+
+        await storageRef.putFile(_selectedImage!);
+        final imageUrl = await storageRef.getDownloadURL();
+        print(imageUrl);
       }
     } on FirebaseAuthException catch (err) {
       if (!mounted) return;
@@ -38,6 +56,9 @@ class _AuthScreenState extends State<AuthScreen> {
           content: Text(err.message ?? 'Authentication Failed!'),
         ),
       );
+      setState(() {
+        _isAuthenticating = false;
+      });
     }
   }
 
@@ -61,11 +82,17 @@ class _AuthScreenState extends State<AuthScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(
-                  'assets/images/quiz-logo.png',
-                  width: 250,
-                  color: Colors.white.withOpacity(0.7),
-                ),
+                !_isLogin
+                    ? UserImagePicker(
+                        onPickImage: (pickedImage) {
+                          _selectedImage = pickedImage;
+                        },
+                      )
+                    : Image.asset(
+                        'assets/images/quiz-logo.png',
+                        width: 250,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
                 const SizedBox(
                   height: 50,
                 ),
@@ -145,44 +172,51 @@ class _AuthScreenState extends State<AuthScreen> {
                         const SizedBox(
                           height: 20,
                         ),
-                        InkWell(
-                          onTap: _submit,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimary
-                                  .withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
+                        if (_isAuthenticating)
+                          CircularProgressIndicator(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        if (!_isAuthenticating)
+                          InkWell(
+                            onTap: _submit,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimary
+                                    .withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _isLogin ? "Login" : "Signup",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary),
+                              ),
                             ),
+                          ),
+                        if (!_isAuthenticating)
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isLogin = !_isLogin;
+                              });
+                            },
                             child: Text(
-                              _isLogin ? "Login" : "Signup",
-                              textAlign: TextAlign.center,
+                              _isLogin
+                                  ? "Create an account"
+                                  : "I already have an account",
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary),
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
                             ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _isLogin = !_isLogin;
-                            });
-                          },
-                          child: Text(
-                            _isLogin
-                                ? "Create an account"
-                                : "I already have an account",
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                            ),
-                          ),
-                        )
+                          )
                       ],
                     ),
                   ),
