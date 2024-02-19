@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,6 +17,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
+
   File? _selectedImage;
   var _enteredEmail = '';
   var _enteredUsername = '';
@@ -46,7 +48,15 @@ class _AuthScreenState extends State<AuthScreen> {
 
         await storageRef.putFile(_selectedImage!);
         final imageUrl = await storageRef.getDownloadURL();
-        print(imageUrl);
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredentials.user!.uid)
+            .set({
+          'username': _enteredUsername,
+          'email': _enteredEmail,
+          'image_url': imageUrl,
+        });
       }
     } on FirebaseAuthException catch (err) {
       if (!mounted) return;
@@ -70,8 +80,8 @@ class _AuthScreenState extends State<AuthScreen> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(232, 77, 13, 151),
-              Color.fromARGB(255, 119, 25, 182),
+              Color(0xFF2a2b31),
+              Color.fromARGB(218, 42, 43, 49),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -123,7 +133,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                             prefixIcon: const Icon(Icons.email),
                             prefixIconColor:
-                                Theme.of(context).colorScheme.primary,
+                                Theme.of(context).colorScheme.secondary,
                             filled: true,
                             fillColor: Colors.white,
                             hintText: "Email",
@@ -139,6 +149,43 @@ class _AuthScreenState extends State<AuthScreen> {
                         const SizedBox(
                           height: 10,
                         ),
+                        if (!_isLogin)
+                          TextFormField(
+                            validator: (value) {
+                              if (value == null ||
+                                  value.isEmpty ||
+                                  value.trim().length < 4) {
+                                return 'Please enter at least characters.';
+                              }
+                              return null;
+                            },
+                            onSaved: (newValue) => _enteredUsername = newValue!,
+                            decoration: InputDecoration(
+                              errorStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.onError,
+                              ),
+                              contentPadding: const EdgeInsets.all(20),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              prefixIcon: const Icon(Icons.person),
+                              prefixIconColor:
+                                  Theme.of(context).colorScheme.secondary,
+                              filled: true,
+                              fillColor: Colors.white,
+                              hintText: "Username",
+                            ),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            enableSuggestions: false,
+                          ),
+                        if (!_isLogin)
+                          const SizedBox(
+                            height: 10,
+                          ),
                         TextFormField(
                           obscureText: true,
                           validator: (value) {
@@ -159,7 +206,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                             prefixIcon: const Icon(Icons.key),
                             prefixIconColor:
-                                Theme.of(context).colorScheme.primary,
+                                Theme.of(context).colorScheme.secondary,
                             filled: true,
                             fillColor: Colors.white,
                             hintText: "Password",

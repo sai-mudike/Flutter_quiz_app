@@ -22,9 +22,11 @@ class App extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: "Flutter Quiz",
-      theme: ThemeData().copyWith(
-          colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color.fromARGB(255, 78, 13, 151))),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2a2b31),
+        ),
+      ),
       home: StreamBuilder(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (ctx, snapshot) {
