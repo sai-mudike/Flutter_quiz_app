@@ -17,6 +17,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _focus = FocusNode();
 
   File? _selectedImage;
   var _enteredEmail = '';
@@ -26,6 +27,7 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isAuthenticating = false;
 
   void _submit() async {
+    _focus.unfocus();
     final isValid = _formKey.currentState!.validate();
     if (!isValid || !_isLogin && _selectedImage == null) return;
     _formKey.currentState!.save();
@@ -187,6 +189,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             height: 10,
                           ),
                         TextFormField(
+                          focusNode: _focus,
                           obscureText: true,
                           validator: (value) {
                             if (value == null || value.trim().length < 6) {
